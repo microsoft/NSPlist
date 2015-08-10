@@ -30,16 +30,18 @@ typedef enum {
 
 typedef enum {
   NSPlistStringString,
+  NSPlistBoolString,
   NSPlistIntegerString,
   NSPlistRealString,
   NSPlistDateString,
 } NSPlistStringType;
 
-
 class NSPlistValue {
 public:
   virtual ~NSPlistValue() = 0;
   NSPlistValue(NSPlistValueType type) : m_type(type) {}
+  void write(std::ostream& out) const;
+  virtual void write(std::ostream& out, unsigned indentLevel) const = 0;
 
   NSPlistValueType m_type;
 };
@@ -54,17 +56,24 @@ public:
 
   std::string m_str;
   NSPlistStringType m_subType;
+
+private:
+  virtual void write(std::ostream& out, unsigned indentLevel) const;
 };
 
 class NSPlistData : public NSPlistValue {
 public:
   NSPlistData() : NSPlistValue(NSPlistDataValue) {}
   void insert(const std::string& hexstr);
+  void insert(const std::vector<char>& data);
 
   static NSPlistData* cast(NSPlistValue* val);
   static const NSPlistData* cast(const NSPlistValue* val);
 
   std::vector<char> m_data;
+
+private:
+  virtual void write(std::ostream& out, unsigned indentLevel) const;
 };
 
 typedef std::vector<NSPlistValue*> NSPlistValueArray;
@@ -79,6 +88,9 @@ public:
   static const NSPlistArray* cast(const NSPlistValue* val);
 
   NSPlistValueArray m_array;
+
+private:
+  virtual void write(std::ostream& out, unsigned indentLevel) const;
 };
 
 typedef std::map<std::string, NSPlistValue*> NSPlistValueDict;
@@ -88,11 +100,15 @@ public:
   virtual ~NSPlistDictionary();
   NSPlistDictionary() : NSPlistValue(NSPlistDictionaryValue) {}
   void insert(NSPlistString* key, NSPlistValue* val);
+  void insert(const std::string& key, NSPlistValue* val);
 
   static NSPlistDictionary* cast(NSPlistValue* val);
   static const NSPlistDictionary* cast(const NSPlistValue* val);
 
   NSPlistValueDict m_dict;
+
+private:
+  virtual void write(std::ostream& out, unsigned indentLevel) const;
 };
 
 extern bool loadPlistFromBuffer(const char* byteArray, NSPlistValue*& ret);
